@@ -1,0 +1,6 @@
+{
+  "name": "Simulateur de Salaire Net France",
+  "description": "Simulateur complet de salaire brut en net mensuel en France avec statut cadre/non-cadre, intéressement, participation (versement ou placement), prélèvement à la source et avantages.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

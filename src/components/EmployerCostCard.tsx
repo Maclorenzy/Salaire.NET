@@ -3,16 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { SalaryBreakdown } from '../types/salary';
 import { formatEuro } from '../utils/salaryCalculations';
-import { Building2, PieChart } from 'lucide-react';
+import { Building2, PieChart, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface EmployerCostCardProps {
   breakdown: SalaryBreakdown;
 }
 
 export const EmployerCostCard: React.FC<EmployerCostCardProps> = ({ breakdown }) => {
+  const [isOpen, setIsOpen] = useState(true);
+
   const totalCost = breakdown.totalEmployerCostMonthly;
   const netInPocket = breakdown.netInBankMonthlyStandard;
   const totalSocial = breakdown.employeeContributionsMonthly + breakdown.employerContributionsMonthly;
@@ -23,31 +25,50 @@ export const EmployerCostCard: React.FC<EmployerCostCardProps> = ({ breakdown })
   const socialPercent = Math.max(0, 100 - netPercent - taxPercent);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-slate-50/80 p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-200/80"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
             <Building2 className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
               Coût Total Employeur (Super-Brut)
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 mt-0.5">
               Ce que votre entreprise débourse réellement chaque mois pour votre poste
             </p>
           </div>
         </div>
-        <div className="text-right">
-          <span className="text-xs text-slate-400 font-medium">Super-Brut Annuel</span>
-          <div className="text-sm font-bold font-mono text-slate-800 tabular-nums">
-            {formatEuro(breakdown.totalEmployerCostAnnual)}
+
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <span className="text-[11px] text-slate-400 font-medium block whitespace-nowrap">
+              Super-brut mensuel
+            </span>
+            <div className="text-sm sm:text-base font-bold font-mono text-slate-800 tabular-nums whitespace-nowrap">
+              {formatEuro(breakdown.totalEmployerCostMonthly)}{' '}
+              <span className="text-xs font-normal text-slate-500">/ mois</span>
+            </div>
           </div>
+
+          <button
+            type="button"
+            className="text-slate-500 hover:text-slate-800 p-1 rounded-md cursor-pointer"
+            aria-label={isOpen ? 'Replier le coût employeur' : 'Déplier le coût employeur'}
+          >
+            {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
-      {/* Main KPI Cost */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+      {isOpen && (
+        <div className="p-5 sm:p-6 space-y-4">
+          {/* Main KPI Cost */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
         <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
           <span className="text-xs font-medium text-slate-500 block mb-1">
             Coût Total Mensuel (Entreprise)
@@ -126,6 +147,8 @@ export const EmployerCostCard: React.FC<EmployerCostCardProps> = ({ breakdown })
           )}
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 };

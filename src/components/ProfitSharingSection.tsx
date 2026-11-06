@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BonusItem, PaymentChoice } from '../types/salary';
 import { formatEuro } from '../utils/salaryCalculations';
-import { Landmark, PiggyBank, Wallet, Sparkles, HelpCircle } from 'lucide-react';
+import { Landmark, PiggyBank, Wallet, Sparkles, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ProfitSharingSectionProps {
   enabled: boolean;
@@ -31,6 +31,8 @@ export const ProfitSharingSection: React.FC<ProfitSharingSectionProps> = ({
   setSmoothBonuses,
   marginalTaxRate,
 }) => {
+  const [isOpen, setIsOpen] = useState(true);
+
   const handleAmountChange = (
     setter: React.Dispatch<React.SetStateAction<BonusItem>>,
     current: BonusItem,
@@ -82,23 +84,32 @@ export const ProfitSharingSection: React.FC<ProfitSharingSectionProps> = ({
   const interPreview = getBonusPreview(interessement);
 
   return (
-    <div className={`bg-white rounded-xl border transition-all p-5 sm:p-6 shadow-sm ${enabled ? 'border-slate-200' : 'border-slate-200/70 bg-slate-50/40'}`}>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span>3. Épargne Salariale : Participation & Intéressement</span>
-            <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
-              Loi Pacte
-            </span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Saisissez les montants et choisissez entre un versement immédiat sur compte ou un placement exonéré d&apos;impôt (PEE/PER)
-          </p>
+    <div className={`bg-white rounded-xl border transition-all shadow-sm overflow-hidden ${enabled ? 'border-slate-200' : 'border-slate-200/70'}`}>
+      {/* Clickable Header */}
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-slate-50/80 p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-200/80"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <PiggyBank className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>4. Épargne Salariale : Participation & Intéressement</span>
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
+                Loi Pacte
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Saisissez les montants et choisissez entre un versement immédiat sur compte ou un placement exonéré d&apos;impôt (PEE/PER)
+            </p>
+          </div>
         </div>
 
-        {/* Toggle Activable / Désactivable */}
-        <div className="flex items-center gap-3 self-start sm:self-center shrink-0">
-          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-xs hover:border-slate-300 transition-colors">
+        {/* Toggle Activable / Désactivable + Chevron */}
+        <div className="flex items-center gap-3 self-center shrink-0" onClick={(e) => e.stopPropagation()}>
+          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-2xs hover:border-slate-300 transition-colors">
             <input
               type="checkbox"
               checked={enabled}
@@ -106,11 +117,26 @@ export const ProfitSharingSection: React.FC<ProfitSharingSectionProps> = ({
               className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
             />
             <span className={enabled ? 'text-blue-700' : 'text-slate-600'}>
-              {enabled ? 'Option activée' : "Activer l'épargne salariale"}
+              {enabled ? 'Option activée' : "Activer l'épargne"}
             </span>
           </label>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+            className="text-slate-500 hover:text-slate-800 p-1 rounded-md cursor-pointer"
+            aria-label={isOpen ? 'Replier la section' : 'Déplier la section'}
+          >
+            {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </button>
         </div>
       </div>
+
+      {isOpen && (
+        <div className="p-5 sm:p-6">
 
       {!enabled ? (
         <div className="py-6 px-4 text-center rounded-xl border border-dashed border-slate-300 bg-white/70">
@@ -237,14 +263,14 @@ export const ProfitSharingSection: React.FC<ProfitSharingSectionProps> = ({
                 ))}
               </div>
               <div className="mt-2 text-[11px] text-emerald-800 leading-tight">
-                Net placé sur PEE : <strong className="font-mono">{formatEuro(partPreview.placed)}</strong> · Économie d&apos;impôt : <strong className="font-mono">+{formatEuro(partPreview.taxSaved)}</strong>
+                Net placé sur PEE : <strong className="font-mono whitespace-nowrap">{formatEuro(partPreview.placed)}</strong> · Économie d&apos;impôt : <strong className="font-mono whitespace-nowrap">+{formatEuro(partPreview.taxSaved)}</strong>
               </div>
             </div>
           ) : (
             <div className="bg-blue-50/70 border border-blue-200/60 rounded-lg p-2.5 mb-2 text-xs text-blue-950">
               <div className="flex justify-between items-center text-[11px]">
                 <span>Net touché en direct :</span>
-                <span className="font-mono font-bold text-blue-900">{formatEuro(partPreview.inPocket)}</span>
+                <span className="font-mono font-bold text-blue-900 whitespace-nowrap">{formatEuro(partPreview.inPocket)}</span>
               </div>
               <p className="text-[10px] text-blue-700 mt-1">
                 Net versé après déduction des prélèvements sociaux CSG/CRDS (9,7%).
@@ -343,14 +369,14 @@ export const ProfitSharingSection: React.FC<ProfitSharingSectionProps> = ({
                 ))}
               </div>
               <div className="mt-2 text-[11px] text-emerald-800 leading-tight">
-                Net placé sur PEE : <strong className="font-mono">{formatEuro(interPreview.placed)}</strong> · Économie d&apos;impôt : <strong className="font-mono">+{formatEuro(interPreview.taxSaved)}</strong>
+                Net placé sur PEE : <strong className="font-mono whitespace-nowrap">{formatEuro(interPreview.placed)}</strong> · Économie d&apos;impôt : <strong className="font-mono whitespace-nowrap">+{formatEuro(interPreview.taxSaved)}</strong>
               </div>
             </div>
           ) : (
             <div className="bg-indigo-50/70 border border-indigo-200/60 rounded-lg p-2.5 mb-2 text-xs text-indigo-950">
               <div className="flex justify-between items-center text-[11px]">
                 <span>Net touché en direct :</span>
-                <span className="font-mono font-bold text-indigo-900">{formatEuro(interPreview.inPocket)}</span>
+                <span className="font-mono font-bold text-indigo-900 whitespace-nowrap">{formatEuro(interPreview.inPocket)}</span>
               </div>
               <p className="text-[10px] text-indigo-700 mt-1">
                 Net versé après déduction des prélèvements sociaux CSG/CRDS (9,7%).
@@ -368,6 +394,8 @@ export const ProfitSharingSection: React.FC<ProfitSharingSectionProps> = ({
         </div>
       </div>
         </>
+      )}
+        </div>
       )}
     </div>
   );

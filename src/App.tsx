@@ -18,8 +18,9 @@ import {
 import { calculateSalary, formatEuro } from './utils/salaryCalculations';
 import { Header } from './components/Header';
 import { SalaryInputSection } from './components/SalaryInputSection';
+import { SocialBenefitsSection } from './components/SocialBenefitsSection';
+import { IncomeTaxSection } from './components/IncomeTaxSection';
 import { ProfitSharingSection } from './components/ProfitSharingSection';
-import { SuggestedImprovements } from './components/SuggestedImprovements';
 import { ResultCard } from './components/ResultCard';
 import { PayslipBreakdown } from './components/PayslipBreakdown';
 import { ArbitrageCard } from './components/ArbitrageCard';
@@ -28,10 +29,12 @@ import { ChangelogModal } from './components/ChangelogModal';
 import { APP_VERSION } from './data/changelog';
 
 export default function App() {
-  // State variables
-  const [grossAnnual, setGrossAnnual] = useState<number>(0);
+  // State variables initialisés selon les valeurs demandées par défaut
+  const [grossAnnual, setGrossAnnual] = useState<number>(60000);
   const [status, setStatus] = useState<EmployeeStatus>('cadre');
-  const [monthsCount, setMonthsCount] = useState<12 | 13 | 14>(12);
+  const [employeeContributionRate, setEmployeeContributionRate] = useState<number>(25);
+  const [has13thMonth, setHas13thMonth] = useState<boolean>(true);
+  const [has14thMonth, setHas14thMonth] = useState<boolean>(false);
 
   // Part variable annuelle cadre (+1% step)
   const [variableBonus, setVariableBonus] = useState<VariableBonusConfig>({
@@ -39,30 +42,30 @@ export default function App() {
     percent: 10,
   });
 
-  // Épargne Salariale : Activable / Désactivable, avec valeurs par défaut à 0 €
-  const [profitSharingEnabled, setProfitSharingEnabled] = useState<boolean>(false);
+  // Épargne Salariale : Activable / Désactivable, avec valeurs par défaut à 5000 € chacune en versement direct
+  const [profitSharingEnabled, setProfitSharingEnabled] = useState<boolean>(true);
 
-  // Bonus items (Participation & Intéressement with choice of versement or placement)
+  // Bonus items (Participation & Intéressement = 5000 € en versement sur le compte)
   const [participation, setParticipation] = useState<BonusItem>({
-    amount: 0,
-    choice: 'placement',
+    amount: 5000,
+    choice: 'versement',
     employerMatchPercent: 50,
   });
 
   const [interessement, setInteressement] = useState<BonusItem>({
-    amount: 0,
-    choice: 'placement',
+    amount: 5000,
+    choice: 'versement',
     employerMatchPercent: 50,
   });
 
-  const [smoothBonuses, setSmoothBonuses] = useState<boolean>(false);
+  const [smoothBonuses, setSmoothBonuses] = useState<boolean>(true);
 
-  // Suggested Improvement 1: Prélèvement à la source (Tax at source)
+  // Prélèvement à la source : activé par défaut avec taux de 4.6%
   const [taxSource, setTaxSource] = useState<TaxSourceConfig>({
-    enabled: false,
-    mode: 'auto',
-    customRate: 7.5,
-    customAmount: 220,
+    enabled: true,
+    mode: 'custom',
+    customRate: 4.6,
+    customAmount: 159,
     familyParts: 1,
   });
 
@@ -95,7 +98,10 @@ export default function App() {
     () => ({
       grossAnnual,
       status,
-      monthsCount,
+      employeeContributionRate,
+      has13thMonth,
+      has14thMonth,
+      monthsCount: (has14thMonth ? 14 : has13thMonth ? 13 : 12) as 12 | 13 | 14,
       variableBonus,
       profitSharingEnabled,
       participation,
@@ -109,7 +115,9 @@ export default function App() {
     [
       grossAnnual,
       status,
-      monthsCount,
+      employeeContributionRate,
+      has13thMonth,
+      has14thMonth,
       variableBonus,
       profitSharingEnabled,
       participation,
@@ -142,30 +150,32 @@ export default function App() {
 
   // Quick reset to standard defaults
   const handleReset = () => {
-    setGrossAnnual(0);
+    setGrossAnnual(60000);
     setStatus('cadre');
-    setMonthsCount(12);
+    setEmployeeContributionRate(25);
+    setHas13thMonth(true);
+    setHas14thMonth(false);
     setVariableBonus({
       enabled: false,
       percent: 10,
     });
-    setProfitSharingEnabled(false);
+    setProfitSharingEnabled(true);
     setParticipation({
-      amount: 0,
-      choice: 'placement',
+      amount: 5000,
+      choice: 'versement',
       employerMatchPercent: 50,
     });
     setInteressement({
-      amount: 0,
-      choice: 'placement',
+      amount: 5000,
+      choice: 'versement',
       employerMatchPercent: 50,
     });
-    setSmoothBonuses(false);
+    setSmoothBonuses(true);
     setTaxSource({
-      enabled: false,
-      mode: 'auto',
-      customRate: 7.5,
-      customAmount: 220,
+      enabled: true,
+      mode: 'custom',
+      customRate: 4.6,
+      customAmount: 159,
       familyParts: 1,
     });
     setMealVouchers({
@@ -194,14 +204,36 @@ export default function App() {
 
   // Copy structured summary to clipboard
   const handleCopySummary = async () => {
-    const text = `--- SYNTHÈSE SALAIRE NET FRANCE ---
-Salaire Brut Fixe : ${formatEuro(breakdown.baseGrossAnnual)} / an
-${breakdown.variableBonusEnabled && breakdown.variableBonusAmount > 0 ? `Part variable (${breakdown.variableBonusPercent}%) : +${formatEuro(breakdown.variableBonusAmount)} / an (+${formatEuro(breakdown.variableBonusMonthly)} / mois)\nTotal Brut : ${formatEuro(breakdown.grossAnnual)} / an (${formatEuro(breakdown.grossMonthly)} / mois)\n` : `Total Brut : ${formatEuro(breakdown.grossAnnual)} / an (${formatEuro(breakdown.grossMonthly)} / mois)\n`}Statut : ${breakdown.employeeStatus === 'cadre' ? 'Cadre (~25% cotisations)' : 'Non-cadre (~24% cotisations)'}
-Nombre de mois de versement : ${monthsCount} mois
-Net à payer avant impôt : ${formatEuro(breakdown.netBeforeTaxMonthly)}/mois
-Prélèvement à la source : ${breakdown.estimatedTaxRate}% (-${formatEuro(breakdown.incomeTaxMonthly)}/mois)
-Net Viré en Banque : ${formatEuro(breakdown.netInBankMonthlyStandard)}/mois
+    const advantages: string[] = [];
+    if (mealVouchers.enabled) {
+      advantages.push(
+        `- Titres-restaurant : Part employeur +${formatEuro(breakdown.mealVouchersEmployerMonthly)}/mois | Part salarié déduite -${formatEuro(breakdown.mealVouchersDeductionMonthly)}/mois`
+      );
+    }
+    if (transportPass.enabled) {
+      advantages.push(
+        `- Transports publics : Prise en charge employeur (${transportPass.employerSharePercent}%) soit +${formatEuro(breakdown.transportReimbursementMonthly)}/mois`
+      );
+    }
+    if (mutuelle.enabled) {
+      advantages.push(
+        `- Mutuelle santé : Part employeur +${formatEuro(mutuelle.employerMonthlyCost)}/mois | Part salarié déduite -${formatEuro(breakdown.mutuelleDeductionMonthly)}/mois`
+      );
+    }
 
+    const text = `--- SYNTHÈSE SALAIRE NET FRANCE ---
+Salaire Brut Fixe Annuel : ${formatEuro(breakdown.baseGrossAnnual)} / an
+${breakdown.variableBonusEnabled && breakdown.variableBonusAmount > 0 ? `Part variable (${breakdown.variableBonusPercent}%) : +${formatEuro(breakdown.variableBonusAmount)} / an (+${formatEuro(breakdown.variableBonusMonthly)} / mois)\nTotal Brut : ${formatEuro(breakdown.grossAnnual)} / an (${formatEuro(breakdown.grossMonthly)} / mois)\n` : `Brut régulier : ${formatEuro(breakdown.grossMonthly)} / mois (base ${breakdown.monthsCount} mois)\n`}Statut : ${breakdown.employeeStatus === 'cadre' ? 'Cadre (~25% cotisations)' : 'Non-cadre (~24% cotisations)'}
+${breakdown.has13thMonth ? `Modalité de versement : ${breakdown.has14thMonth ? '14 mois (13e et 14e mois compris dans le brut, versés en une fois)' : '13 mois (13ème mois compris dans le brut, versé en une fois)'}\n` : ''}1. Salaire Net Avant impôts : ${formatEuro(breakdown.netBeforeTaxMonthly)}/mois (${formatEuro(breakdown.netBeforeTaxAnnual)}/an régulier, base [brut/${breakdown.monthsCount}]×12)
+2. Salaire Net Après impôts : ${formatEuro(breakdown.netAfterTaxMonthly)}/mois (${formatEuro(breakdown.netAfterTaxAnnual)}/an régulier, net en poche)
+${breakdown.has13thMonth ? `Lissage budgétaire :
+- ${breakdown.has14thMonth ? 'Net mensuel lissé avec 14ème mois :' : 'Net mensuel lissé avec 13ème mois :'} ${formatEuro(breakdown.smoothedNetBeforeTaxMonthly)}/mois (${formatEuro(breakdown.smoothedNetBeforeTaxAnnual)}/an)
+- ${breakdown.has14thMonth ? 'Net mensuel lissé 14ème mois :' : 'Net mensuel lissé 13ème mois :'} ${formatEuro(breakdown.smoothedNetAfterTaxMonthly)}/mois (${formatEuro(breakdown.smoothedNetAfterTaxAnnual)}/an)
+${smoothBonuses && breakdown.totalBonusNetImmediateAnnual > 0 ? `- Net mensuel lissé avec primes : ${formatEuro(breakdown.smoothedNetAfterTaxWithBonuses)}/mois (inclus ${formatEuro(breakdown.monthlyBonusAddition)}/m de primes)\n` : ''}\n` : (smoothBonuses && breakdown.totalBonusNetImmediateAnnual > 0 ? `Lissage budgétaire (primes) :
+- Net mensuel lissé avec primes (après impôts) : ${formatEuro(breakdown.smoothedNetAfterTaxWithBonuses)}/mois (base ${formatEuro(breakdown.netAfterTaxMonthly)}/m + ${formatEuro(breakdown.monthlyBonusAddition)}/m de primes)
+- Net mensuel lissé avec primes (avant impôts) : ${formatEuro(breakdown.smoothedNetBeforeTaxWithBonuses)}/mois (base ${formatEuro(breakdown.netBeforeTaxMonthly)}/m + ${formatEuro(breakdown.monthlyBonusAddition)}/m de primes)\n\n` : '')}Prélèvement à la source : ${breakdown.estimatedTaxRate}% (-${formatEuro(breakdown.incomeTaxMonthly)}/mois)
+Net Viré en Banque : ${formatEuro(breakdown.netInBankMonthlyStandard)}/mois
+${advantages.length > 0 ? `\nAvantages du Quotidien :\n${advantages.join('\n')}\n` : ''}
 Épargne Salariale :
 - Participation (${formatEuro(breakdown.participationCalc.grossAmount)} brut) : ${breakdown.participationCalc.choice === 'placement' ? `Placé sur PEE/PER (${formatEuro(breakdown.participationCalc.totalPlaced)} capitalisé)` : `Versé sur compte (${formatEuro(breakdown.participationCalc.netAfterTax)} net)`}
 - Intéressement (${formatEuro(breakdown.interessementCalc.grossAmount)} brut) : ${breakdown.interessementCalc.choice === 'placement' ? `Placé sur PEE/PER (${formatEuro(breakdown.interessementCalc.totalPlaced)} capitalisé)` : `Versé sur compte (${formatEuro(breakdown.interessementCalc.netAfterTax)} net)`}
@@ -213,7 +245,7 @@ Coût Global Entreprise (Super-Brut) : ${formatEuro(breakdown.totalEmployerCostM
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setTimeout(() => setCopied(false), 3500);
     } catch {
       // Fallback
     }
@@ -232,14 +264,14 @@ Coût Global Entreprise (Super-Brut) : ${formatEuro(breakdown.totalEmployerCostM
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-8 space-y-8">
         {/* Intro Banner */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-slate-200">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               Simulateur de Salaire Net Mensuel en France
             </h1>
-            <p className="text-sm text-slate-600 mt-1 max-w-3xl">
+            <p className="text-sm text-slate-600 mt-1 max-w-4xl">
               Calculez instantanément votre rémunération nette d&apos;après votre brut annuel, votre statut cadre/non-cadre, l&apos;arbitrage de votre participation & intéressement (versement vs placement PEE) et les déductions réelles de la fiche de paie.
             </p>
           </div>
@@ -251,38 +283,47 @@ Coût Global Entreprise (Super-Brut) : ${formatEuro(breakdown.totalEmployerCostM
           </div>
         </div>
 
-        {/* 2-Column Split: Inputs & Results */}
+        {/* 2-Column Split: Inputs & Results (Wider left column for crystal clear inputs without text wrapping) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Interactive Inputs (7 cols on lg) */}
-          <div className="lg:col-span-7 space-y-6">
+          {/* Left Column: Interactive Inputs (7 cols on lg/xl) */}
+          <div className="lg:col-span-7 xl:col-span-7 2xl:col-span-7 space-y-6">
             {/* Step 1: Gross Salary & Status */}
             <SalaryInputSection
               grossAnnual={grossAnnual}
               setGrossAnnual={setGrossAnnual}
               status={status}
               setStatus={setStatus}
-              monthsCount={monthsCount}
-              setMonthsCount={setMonthsCount}
+              employeeContributionRate={employeeContributionRate}
+              setEmployeeContributionRate={setEmployeeContributionRate}
+              has13thMonth={has13thMonth}
+              setHas13thMonth={setHas13thMonth}
+              has14thMonth={has14thMonth}
+              setHas14thMonth={setHas14thMonth}
               variableBonus={variableBonus}
               setVariableBonus={setVariableBonus}
             />
 
-            {/* Step 2: Impôt sur le Revenu (PAS) & Avantages Sociaux */}
-            <SuggestedImprovements
-              taxSource={taxSource}
-              setTaxSource={setTaxSource}
+            {/* Step 2: Avantages Sociaux */}
+            <SocialBenefitsSection
               mealVouchers={mealVouchers}
               setMealVouchers={setMealVouchers}
               transportPass={transportPass}
               setTransportPass={setTransportPass}
               mutuelle={mutuelle}
               setMutuelle={setMutuelle}
+            />
+
+            {/* Step 3: Impôt sur le Revenu (PAS) */}
+            <IncomeTaxSection
+              taxSource={taxSource}
+              setTaxSource={setTaxSource}
               calculatedTaxRate={breakdown.estimatedTaxRate}
               netBeforeTaxMonthly={breakdown.netBeforeTaxMonthly}
               incomeTaxMonthly={breakdown.incomeTaxMonthly}
+              mealVoucherEmployeeDeduction={breakdown.mealVouchersDeductionMonthly}
             />
 
-            {/* Step 3: Participation & Intéressement with choice versement / placement */}
+            {/* Step 4: Épargne Salariale : Participation & Intéressement */}
             <ProfitSharingSection
               enabled={profitSharingEnabled}
               setEnabled={setProfitSharingEnabled}
@@ -296,11 +337,12 @@ Coût Global Entreprise (Super-Brut) : ${formatEuro(breakdown.totalEmployerCostM
             />
           </div>
 
-          {/* Right Column: Dynamic Results & Breakdown (5 cols on lg) */}
-          <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+          {/* Right Column: Dynamic Results & Breakdown (5 cols on lg/xl) */}
+          <div className="lg:col-span-5 xl:col-span-5 2xl:col-span-5 space-y-6 lg:sticky lg:top-20">
             {/* Primary KPI Result Card */}
             <ResultCard
               breakdown={breakdown}
+              simulationParams={simulationParams}
               smoothBonuses={smoothBonuses}
               onAdjustTaxRate={handleAdjustTaxRate}
             />
@@ -376,7 +418,7 @@ Coût Global Entreprise (Super-Brut) : ${formatEuro(breakdown.totalEmployerCostM
 
       {/* Clean Footer */}
       <footer className="bg-white border-t border-slate-200 mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2 flex-wrap">
             <span>Simulateur de salaire net indicatif · Conforme législation Urssaf & barème 2026.</span>
             <span aria-hidden="true">·</span>

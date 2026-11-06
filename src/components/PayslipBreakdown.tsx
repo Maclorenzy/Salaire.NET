@@ -17,32 +17,47 @@ export const PayslipBreakdown: React.FC<PayslipBreakdownProps> = ({ breakdown })
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+      <div
+        onClick={() => setShowDetails(!showDetails)}
+        className="bg-slate-50/80 p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-200/80"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0 shadow-xs">
             <FileText className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
               Bulletin de Paie Clarifié (Mensuel)
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 mt-0.5">
               Décomposition officielle des cotisations sociales et fiscales françaises
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowDetails(!showDetails)}
-          className="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-        >
-          <span>{showDetails ? 'Masquer le détail' : 'Afficher le détail'}</span>
-          {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <span className="text-[11px] text-slate-400 font-medium block whitespace-nowrap">
+              Virement net
+            </span>
+            <div className="text-sm sm:text-base font-bold text-emerald-700 font-mono tabular-nums whitespace-nowrap">
+              {formatEuro(breakdown.netInBankMonthlyStandard)}{' '}
+              <span className="text-xs font-normal text-slate-500">/ mois</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="text-slate-500 hover:text-slate-800 p-1 rounded-md cursor-pointer"
+            aria-label={showDetails ? 'Replier le bulletin de paie' : 'Déplier le bulletin de paie'}
+          >
+            {showDetails ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
-      <div className="p-5 space-y-4">
+      {showDetails && (
+        <div className="p-5 space-y-4">
         {/* Table summary */}
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -54,40 +69,36 @@ export const PayslipBreakdown: React.FC<PayslipBreakdownProps> = ({ breakdown })
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {/* Salaire Brut (avec détail part variable si actif) */}
-              {breakdown.variableBonusEnabled && breakdown.variableBonusAmount > 0 ? (
-                <>
-                  <tr className="text-slate-700 bg-slate-50/30">
-                    <td className="py-2 px-1">Salaire brut fixe de base</td>
-                    <td className="text-right py-2 px-1 font-mono text-slate-500">Fixe contractuel</td>
-                    <td className="text-right py-2 px-1 font-mono text-slate-700 tabular-nums">
-                      {formatEuro(breakdown.grossMonthly - breakdown.variableBonusMonthly)}
-                    </td>
-                  </tr>
-                  <tr className="text-blue-800 bg-blue-50/30">
-                    <td className="py-2 px-1 font-medium">Part variable (Bonus objectifs {breakdown.variableBonusPercent}%)</td>
-                    <td className="text-right py-2 px-1 font-mono text-blue-600">Variable cadre</td>
-                    <td className="text-right py-2 px-1 font-mono font-medium text-blue-700 tabular-nums">
-                      +{formatEuro(breakdown.variableBonusMonthly)}
-                    </td>
-                  </tr>
-                  <tr className="font-semibold text-slate-900 bg-slate-100/60">
-                    <td className="py-2.5 px-1">Total Salaire Brut Mensuel Soumis</td>
-                    <td className="text-right py-2.5 px-1 font-mono text-slate-500">Fixe + Variable</td>
-                    <td className="text-right py-2.5 px-1 font-mono font-bold text-slate-900 tabular-nums">
-                      {formatEuro(breakdown.grossMonthly)}
-                    </td>
-                  </tr>
-                </>
-              ) : (
-                <tr className="font-semibold text-slate-900 bg-slate-50/50">
-                  <td className="py-2.5 px-1">Salaire Brut Mensuel</td>
-                  <td className="text-right py-2.5 px-1 font-mono text-slate-500">35h / Cadence</td>
-                  <td className="text-right py-2.5 px-1 font-mono text-slate-900 tabular-nums">
-                    {formatEuro(breakdown.grossMonthly)}
+              {/* Salaire Brut mensuel standard */}
+              <tr className="text-slate-700 bg-slate-50/30">
+                <td className="py-2 px-1">
+                  Salaire brut mensuel fixe {breakdown.has13thMonth ? `(base ${breakdown.monthsCount} mois)` : '(base 12 mois)'}
+                </td>
+                <td className="text-right py-2 px-1 font-mono text-slate-500">
+                  Brut fixe / {breakdown.monthsCount}
+                </td>
+                <td className="text-right py-2 px-1 font-mono text-slate-700 tabular-nums">
+                  {formatEuro(breakdown.baseGrossMonthlyStandard)}
+                </td>
+              </tr>
+              {breakdown.variableBonusEnabled && breakdown.variableBonusAmount > 0 && (
+                <tr className="text-blue-800 bg-blue-50/30">
+                  <td className="py-2 px-1 font-medium">Part variable (Bonus objectifs {breakdown.variableBonusPercent}%)</td>
+                  <td className="text-right py-2 px-1 font-mono text-blue-600">Variable cadre / 12</td>
+                  <td className="text-right py-2 px-1 font-mono font-medium text-blue-700 tabular-nums">
+                    +{formatEuro(breakdown.variableBonusMonthly)}
                   </td>
                 </tr>
               )}
+              <tr className="font-semibold text-slate-900 bg-slate-100/60">
+                <td className="py-2.5 px-1">
+                  Total Salaire Brut Mensuel {breakdown.has13thMonth ? `(base ${breakdown.monthsCount} mois)` : '(base 12 mois)'}
+                </td>
+                <td className="text-right py-2.5 px-1 font-mono text-slate-500">Fixe + Primes</td>
+                <td className="text-right py-2.5 px-1 font-mono font-bold text-slate-900 tabular-nums">
+                  {formatEuro(breakdown.grossMonthly)}
+                </td>
+              </tr>
 
               {/* Social contributions details */}
               {showDetails && (
@@ -144,7 +155,7 @@ export const PayslipBreakdown: React.FC<PayslipBreakdownProps> = ({ breakdown })
               {/* Total Cotisations Salariales */}
               <tr className="font-medium text-rose-700 bg-rose-50/30">
                 <td className="py-2.5 px-1">
-                  Total des cotisations salariales ({breakdown.employeeStatus === 'cadre' ? '~25%' : '~24%'})
+                  Total des cotisations salariales ({Math.round(breakdown.employeeRate * 100)}%)
                 </td>
                 <td className="text-right py-2.5 px-1 font-mono text-rose-600">
                   {breakdown.employeeStatus === 'cadre' ? 'Statut Cadre' : 'Statut Non-Cadre'}
@@ -179,7 +190,7 @@ export const PayslipBreakdown: React.FC<PayslipBreakdownProps> = ({ breakdown })
               ) : (
                 <tr className="text-slate-500">
                   <td className="py-2 px-1 pl-4">Impôt sur le Revenu prélevé à la source (PAS)</td>
-                  <td className="text-right py-2 px-1 font-mono text-slate-400">Taux : 0% (Non imposable)</td>
+                  <td className="text-right py-2 px-1 font-mono text-slate-400">Taux : 0% (Non imposable ou désactivé)</td>
                   <td className="text-right py-2 px-1 font-mono text-slate-400 tabular-nums">0 €</td>
                 </tr>
               )}
@@ -198,13 +209,30 @@ export const PayslipBreakdown: React.FC<PayslipBreakdownProps> = ({ breakdown })
               {/* Sous-total Salaire Net Après impôts */}
               <tr className="font-bold text-blue-900 bg-blue-50/50">
                 <td className="py-2 px-1 text-xs">
-                  Salaire Net Après impôts {breakdown.mealVouchersDeductionMonthly > 0 && '(déduit des tickets resto)'}
+                  Salaire Net Après impôts (base 12 mois){breakdown.mealVouchersDeductionMonthly > 0 && ' [déduit des tickets resto]'}
                 </td>
-                <td className="text-right py-2 px-1 font-mono text-blue-600 text-[11px]">Net après impôts</td>
+                <td className="text-right py-2 px-1 font-mono text-blue-600 text-[11px]">
+                  Net standard
+                </td>
                 <td className="text-right py-2 px-1 font-mono text-xs font-black text-blue-800 tabular-nums">
                   {formatEuro(breakdown.netAfterTaxMonthly)}
                 </td>
               </tr>
+
+              {/* Ligne 13ème / 14ème mois lissé si coché */}
+              {breakdown.has13thMonth && (
+                <tr className="text-emerald-900 bg-emerald-50/50 font-medium">
+                  <td className="py-2 px-1 text-xs pl-3">
+                    ↳ {breakdown.has14thMonth ? 'Net mensuel lissé 14ème mois' : 'Net mensuel lissé 13ème mois'}
+                  </td>
+                  <td className="text-right py-2 px-1 font-mono text-emerald-700 text-[11px]">
+                    Net lissé : {formatEuro(breakdown.smoothedNetAfterTaxMonthly)}/m
+                  </td>
+                  <td className="text-right py-2 px-1 font-mono font-bold text-emerald-700 tabular-nums">
+                    +{formatEuro(breakdown.smoothed13th14thNetAfterTaxMonthly)}
+                  </td>
+                </tr>
+              )}
 
               {/* Compléments bancaires */}
               {breakdown.mutuelleDeductionMonthly > 0 && (
@@ -250,6 +278,7 @@ export const PayslipBreakdown: React.FC<PayslipBreakdownProps> = ({ breakdown })
           </p>
         </div>
       </div>
+      )}
     </div>
   );
 };

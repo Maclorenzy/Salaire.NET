@@ -3,18 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { EmployeeStatus, VariableBonusConfig } from '../types/salary';
 import { formatEuro } from '../utils/salaryCalculations';
-import { Minus, Plus, Briefcase, UserCheck, TrendingUp } from 'lucide-react';
+import { Minus, Plus, Briefcase, UserCheck, TrendingUp, Calendar, Info, ChevronDown, ChevronUp, Coins } from 'lucide-react';
 
 interface SalaryInputSectionProps {
   grossAnnual: number;
   setGrossAnnual: (value: number) => void;
   status: EmployeeStatus;
   setStatus: (status: EmployeeStatus) => void;
-  monthsCount: 12 | 13 | 14;
-  setMonthsCount: (months: 12 | 13 | 14) => void;
+  employeeContributionRate: number;
+  setEmployeeContributionRate: (rate: number) => void;
+  has13thMonth: boolean;
+  setHas13thMonth: (checked: boolean) => void;
+  has14thMonth: boolean;
+  setHas14thMonth: (checked: boolean) => void;
   variableBonus: VariableBonusConfig;
   setVariableBonus: React.Dispatch<React.SetStateAction<VariableBonusConfig>>;
 }
@@ -24,11 +28,17 @@ export const SalaryInputSection: React.FC<SalaryInputSectionProps> = ({
   setGrossAnnual,
   status,
   setStatus,
-  monthsCount,
-  setMonthsCount,
+  employeeContributionRate,
+  setEmployeeContributionRate,
+  has13thMonth,
+  setHas13thMonth,
+  has14thMonth,
+  setHas14thMonth,
   variableBonus,
   setVariableBonus,
 }) => {
+  const [isOpen, setIsOpen] = useState(true);
+
   const handleIncrement = (delta: number) => {
     const nextVal = Math.max(0, Math.round((grossAnnual + delta) / 1000) * 1000);
     setGrossAnnual(nextVal);
@@ -61,44 +71,71 @@ export const SalaryInputSection: React.FC<SalaryInputSectionProps> = ({
     });
   };
 
-  // Calculations for display
+  // Calcul standard sur base 12 mois
   const variableAmountAnnual = variableBonus.enabled
     ? Math.round(grossAnnual * (variableBonus.percent / 100))
     : 0;
   const totalGrossAnnual = grossAnnual + variableAmountAnnual;
-  const monthlyGrossTotal = Math.round(totalGrossAnnual / monthsCount);
+
+  // Salaire brut mensuel régulier selon le nombre de mois (12, 13 ou 14)
+  const monthsCount = has14thMonth ? 14 : has13thMonth ? 13 : 12;
   const monthlyGrossBase = Math.round(grossAnnual / monthsCount);
-  const monthlyVariableGross = Math.round(variableAmountAnnual / monthsCount);
+  const monthlyVariableGross = Math.round(variableAmountAnnual / 12);
+  const monthlyGrossTotal = monthlyGrossBase + monthlyVariableGross;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            1. Salaire Brut Annuel & Statut
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Fixe annuel (par 1 000 €) · Part variable cadre · Statut & mensualités
-          </p>
-        </div>
-        <div className="text-right">
-          <span className="text-xs text-slate-400 font-medium">
-            {variableBonus.enabled ? 'Brut total moyen' : 'Brut mensuel'}
-          </span>
-          <div className="text-sm font-bold text-slate-800 font-mono tabular-nums">
-            {formatEuro(monthlyGrossTotal)} <span className="text-xs font-normal text-slate-500">/ mois</span>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Clickable Card Header */}
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-slate-50/80 p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-200/80"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Coins className="w-4 h-4" />
           </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              1. Salaire Brut Annuel & Statut
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Fixe annuel (par 1 000 €) · Statut & 13e/14e mois · Part variable
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="text-right">
+            <span className="text-[11px] text-slate-400 font-medium block whitespace-nowrap">
+              {variableBonus.enabled ? `Brut total (${monthsCount} m.)` : `Brut mensuel (${monthsCount} m.)`}
+            </span>
+            <div className="text-sm sm:text-base font-bold text-slate-900 font-mono tabular-nums whitespace-nowrap">
+              {formatEuro(monthlyGrossTotal)}{' '}
+              <span className="text-xs font-normal text-slate-500">/ mois</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="text-slate-500 hover:text-slate-800 p-1 rounded-md cursor-pointer"
+            aria-label={isOpen ? 'Replier la section' : 'Déplier la section'}
+          >
+            {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
-      {/* Main Base Gross Input with Steppers */}
+      {isOpen && (
+        <div className="p-5 sm:p-6 space-y-5">
+
+      {/* 1. Main Base Gross Input with Steppers */}
       <div className="mb-5">
-        <div className="flex items-center justify-between mb-1.5">
-          <label htmlFor="gross-input" className="block text-xs font-semibold text-slate-700">
+        <div className="flex items-center justify-between mb-1.5 gap-2">
+          <label htmlFor="gross-input" className="block text-xs font-semibold text-slate-700 whitespace-nowrap">
             Salaire brut fixe annuel
           </label>
-          <span className="text-xs font-mono text-slate-500">
-            {formatEuro(monthlyGrossBase)} / mois (fixe)
+          <span className="text-xs font-mono text-slate-500 whitespace-nowrap">
+            {formatEuro(monthlyGrossBase)} / mois (base {monthsCount} mois)
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -163,8 +200,230 @@ export const SalaryInputSection: React.FC<SalaryInputSectionProps> = ({
         </div>
       </div>
 
-      {/* Part variable cadre (Activable/Désactivable avec pas de +1%) */}
-      <div className="mb-5 p-4 rounded-xl border border-slate-200 bg-slate-50/70">
+      {/* 2. Statut professionnel & Nombre de mois de versement (placé AU-DESSUS de la part variable) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100 mb-5">
+        {/* Statut Cadre / Non-Cadre */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-2">
+            Statut professionnel
+          </label>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg">
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('non_cadre');
+                setEmployeeContributionRate(24);
+              }}
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs rounded-md transition-all cursor-pointer ${
+                status === 'non_cadre'
+                  ? 'bg-white text-slate-900 shadow-sm font-bold border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 font-medium'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5 text-slate-500" />
+              <span>Non-cadre</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('cadre');
+                setEmployeeContributionRate(25);
+              }}
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs rounded-md transition-all cursor-pointer ${
+                status === 'cadre'
+                  ? 'bg-white text-blue-700 shadow-sm font-bold border border-blue-200'
+                  : 'text-slate-600 hover:text-slate-900 font-medium'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+              <span>Cadre</span>
+            </button>
+          </div>
+
+          {/* Curseur pour ajuster la part de cotisations salariales avec incrémentation de 1% */}
+          <div className="mt-2.5 p-2.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+            <div className="flex items-center justify-between gap-1">
+              <div>
+                <span className="text-[11px] font-bold text-slate-800 block">
+                  Cotisations salariales :
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  {status === 'cadre' ? 'Standard Cadre : 25%' : 'Standard Non-cadre : 24%'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEmployeeContributionRate(Math.max(10, Math.min(45, employeeContributionRate - 1)))}
+                  className="w-6 h-6 flex items-center justify-center rounded border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                  title="Diminuer de 1%"
+                  aria-label="Diminuer les cotisations de 1 pourcent"
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+                <div className="relative w-14">
+                  <input
+                    type="number"
+                    min={10}
+                    max={45}
+                    step={1}
+                    value={employeeContributionRate}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) setEmployeeContributionRate(Math.max(10, Math.min(45, val)));
+                    }}
+                    className="w-full h-6 px-1 pr-4 text-center text-xs font-bold font-mono text-slate-900 bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-400">
+                    %
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEmployeeContributionRate(Math.max(10, Math.min(45, employeeContributionRate + 1)))}
+                  className="w-6 h-6 flex items-center justify-center rounded border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                  title="Augmenter de 1%"
+                  aria-label="Augmenter les cotisations de 1 pourcent"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Slider avec pas de 1% */}
+            <input
+              type="range"
+              min={15}
+              max={35}
+              step={1}
+              value={employeeContributionRate}
+              onChange={(e) => setEmployeeContributionRate(parseInt(e.target.value, 10) || 24)}
+              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+
+            <div className="flex justify-between text-[10px] font-mono text-slate-400">
+              <span>15%</span>
+              <span className="text-blue-700 font-semibold">{employeeContributionRate}% appliqué</span>
+              <span>35%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 13ème et 14ème mois : options pour activer l'affichage du lissage de salaire */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs font-semibold text-slate-700">
+              13ème & 14ème mois (Optionnel)
+            </label>
+            <span className="text-[11px] font-mono text-slate-500">
+              {has14thMonth
+                ? '13e & 14e mois activés'
+                : has13thMonth
+                ? '13e mois activé'
+                : 'Base 12 mois'}
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {/* Case à cocher 13ème mois */}
+            <label
+              className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                has13thMonth
+                  ? 'border-blue-300 bg-blue-50/80 shadow-xs'
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100/70'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={has13thMonth}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setHas13thMonth(checked);
+                  if (!checked) {
+                    setHas14thMonth(false);
+                  }
+                }}
+                className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900">
+                    13ème mois
+                  </span>
+                  {has13thMonth && (
+                    <span className="text-[11px] font-mono font-bold text-blue-700 whitespace-nowrap">
+                      Base (brut / 13) × 12
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Compris dans le brut annuel (versé en une fois). Mensualités régulières sur base (brut/13)×12 et lissage avec +1/12 de salaire mensuel.
+                </p>
+              </div>
+            </label>
+
+            {/* Case à cocher 14ème mois */}
+            <label
+              className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                has14thMonth
+                  ? 'border-blue-400 bg-blue-50/90 shadow-xs'
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100/70'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={has14thMonth}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setHas14thMonth(checked);
+                  if (checked) {
+                    setHas13thMonth(true);
+                  }
+                }}
+                className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900">
+                    14ème mois
+                  </span>
+                  {has14thMonth && (
+                    <span className="text-[11px] font-mono font-bold text-blue-700 whitespace-nowrap">
+                      Base (brut / 14) × 12
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Compris dans le brut annuel (versé en une fois). Mensualités régulières sur base (brut/14)×12 et lissage avec +2/12 de salaire mensuel.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* Explications claires */}
+          <div className="text-[11px] text-slate-600 mt-2 leading-relaxed bg-slate-50 border border-slate-200/80 rounded-lg p-2.5 flex items-start gap-2">
+            <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+            <div>
+              {has14thMonth ? (
+                <span>
+                  <strong>13e et 14e mois compris dans le brut annuel :</strong> Les mensualités régulières sont calculées sur la base de <code>(brut fixe / 14) × 12</code> déduit des cotisations et du PAS. Le lissage mensuel ajoute <code>2/12èmes</code> de salaire mensuel avant et après impôts.
+                </span>
+              ) : has13thMonth ? (
+                <span>
+                  <strong>13e mois compris dans le brut annuel :</strong> Les mensualités régulières sont calculées sur la base de <code>(brut fixe / 13) × 12</code> déduit des cotisations et du PAS. Le lissage mensuel ajoute <code>1/12ème</code> de salaire mensuel avant et après impôts.
+                </span>
+              ) : (
+                <span>
+                  <strong>Base standard 12 mois :</strong> Le salaire annuel brut est réparti sur 12 mensualités régulières. Cochez le 13e ou 14e mois si votre rémunération annuelle inclut une prime versée en une fois.
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Part variable cadre (POSITIONNÉE SOUS le Statut professionnel & le Nombre de mois) */}
+      <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-blue-600 shrink-0" />
@@ -253,123 +512,29 @@ export const SalaryInputSection: React.FC<SalaryInputSectionProps> = ({
             {/* Live calculation breakdown */}
             <div className="grid grid-cols-2 gap-2 p-2.5 bg-white border border-slate-200 rounded-lg text-xs">
               <div>
-                <span className="text-[11px] text-slate-500 block">Montant du variable brut :</span>
-                <span className="font-mono font-bold text-blue-700">
+                <span className="text-[11px] text-slate-500 block whitespace-nowrap">Montant du variable brut :</span>
+                <span className="font-mono font-bold text-blue-700 whitespace-nowrap">
                   +{formatEuro(variableAmountAnnual)} / an
                 </span>
-                <span className="text-[10px] text-slate-400 block">
-                  (+{formatEuro(monthlyVariableGross)} / mois)
+                <span className="text-[10px] text-slate-400 block whitespace-nowrap">
+                  (+{formatEuro(monthlyVariableGross)} / mois lissé)
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[11px] text-slate-500 block">Total Brut (Fixe + Variable) :</span>
-                <span className="font-mono font-bold text-slate-900">
+                <span className="text-[11px] text-slate-500 block whitespace-nowrap">Total Brut (Fixe + Variable) :</span>
+                <span className="font-mono font-bold text-slate-900 whitespace-nowrap">
                   {formatEuro(totalGrossAnnual)} / an
                 </span>
-                <span className="text-[10px] text-slate-400 block">
-                  ({formatEuro(monthlyGrossTotal)} / mois)
+                <span className="text-[10px] text-slate-400 block whitespace-nowrap">
+                  ({formatEuro(monthlyGrossTotal)} / mois lissé)
                 </span>
               </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* Cadre vs Non-Cadre Selector & Months Count */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100">
-        {/* Statut Cadre / Non-Cadre */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">
-            Statut professionnel
-          </label>
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setStatus('non_cadre')}
-              className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-md transition-all cursor-pointer ${
-                status === 'non_cadre'
-                  ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5 text-slate-500" />
-              <span>Non-cadre</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatus('cadre')}
-              className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-md transition-all cursor-pointer ${
-                status === 'cadre'
-                  ? 'bg-white text-blue-700 shadow-sm font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Briefcase className="w-3.5 h-3.5 text-blue-600" />
-              <span>Cadre</span>
-            </button>
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
-            {status === 'cadre' ? (
-              <span>
-                Cotisations salariales estimées à <strong>~25%</strong> (APEC, prévoyance cadre 1,5% et retraite tranche 2).
-              </span>
-            ) : (
-              <span>
-                Cotisations salariales estimées à <strong>~24%</strong> (taux moyen conventionnel du secteur privé).
-              </span>
-            )}
-          </div>
         </div>
-
-        {/* Months Count: 12, 13 or 14 months */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2">
-            Nombre de mois de versement
-          </label>
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setMonthsCount(12)}
-              className={`py-2 px-2 text-xs font-medium rounded-md transition-all cursor-pointer ${
-                monthsCount === 12
-                  ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              12 mois
-            </button>
-            <button
-              type="button"
-              onClick={() => setMonthsCount(13)}
-              className={`py-2 px-2 text-xs font-medium rounded-md transition-all cursor-pointer ${
-                monthsCount === 13
-                  ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              13 mois
-            </button>
-            <button
-              type="button"
-              onClick={() => setMonthsCount(14)}
-              className={`py-2 px-2 text-xs font-medium rounded-md transition-all cursor-pointer ${
-                monthsCount === 14
-                  ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              14 mois
-            </button>
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
-            {monthsCount === 14
-              ? 'Réparti sur 14 mensualités (ex: banques, assurances, chimie ou conventions spécifiques).'
-              : monthsCount === 13
-              ? 'Réparti sur 13 mensualités (inclut la prime de 13ème mois de fin d\'année).'
-              : 'Paiement standard régulier réparti sur 12 mensualités.'}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

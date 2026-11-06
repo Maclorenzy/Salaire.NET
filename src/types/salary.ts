@@ -48,13 +48,16 @@ export interface VariableBonusConfig {
 export interface SimulationParams {
   grossAnnual: number; // Salaire brut fixe annuel
   status: EmployeeStatus;
-  monthsCount: 12 | 13 | 14;
+  has13thMonth: boolean; // Case à cocher 13ème mois (+1/12ème du salaire brut annuel)
+  has14thMonth: boolean; // Case à cocher 14ème mois (+2/12èmes du salaire brut annuel)
+  monthsCount?: 12 | 13 | 14; // Dérivé pour rétrocompatibilité
   variableBonus: VariableBonusConfig;
   profitSharingEnabled: boolean; // Épargne salariale activable / désactivable
   participation: BonusItem;
   interessement: BonusItem;
   smoothBonuses: boolean; // Lisser la participation/intéressement sur 12 mois
   taxSource: TaxSourceConfig;
+  employeeContributionRate?: number; // Taux personnalisé de cotisations salariales en % (ex: 24, 25)
   mealVouchers: MealVoucherConfig;
   transportPass: TransportPassConfig;
   mutuelle: MutuelleConfig;
@@ -78,8 +81,28 @@ export interface SalaryBreakdown {
   variableBonusPercent: number;
   variableBonusAmount: number;
   variableBonusMonthly: number;
-  grossAnnual: number; // Total brut (base + variable)
-  grossMonthly: number;
+  grossAnnual: number; // Total brut contractuel global (base + variable)
+  annualGrossRegular: number; // Base annuelle brute répartie sur les mois courants (ex: (brut/13)*12)
+  has13thMonth: boolean;
+  has14thMonth: boolean;
+  extraFraction: number; // 0, 1/12 ou 2/12
+  
+  // Lissage du 13ème et 14ème mois (avant et après impôts)
+  smoothed13th14thNetBeforeTaxMonthly: number; // Quote-part mensuelle lissée du 13e/14e mois avant impôt
+  smoothed13th14thNetAfterTaxMonthly: number; // Quote-part mensuelle lissée du 13e/14e mois après impôt
+  smoothedNetBeforeTaxMonthly: number; // Salaire net mensuel lissé avant impôts
+  smoothedNetBeforeTaxAnnual: number; // Salaire net annuel lissé avant impôts
+  smoothedNetAfterTaxMonthly: number; // Salaire net mensuel lissé après impôts
+  smoothedNetAfterTaxAnnual: number; // Salaire net annuel lissé après impôts
+
+  grossMonthly: number; // Brut mensuel régulier (base / 13 si 13e mois, / 14 si 14e mois, / 12 sinon)
+  baseGrossMonthlyStandard: number; // Brut fixe mensuel régulier
+  baseNetBeforeTaxMonthly: number; // Net avant impôts de base standard
+  baseNetAfterTaxMonthly: number; // Net après impôts de base standard
+  baseNetBeforeTaxAnnual: number;
+  baseNetAfterTaxAnnual: number;
+  monthsCount: 12 | 13 | 14;
+  extraMonthsCount: number;
   employeeStatus: EmployeeStatus;
   employeeRate: number; // e.g. 0.24 or 0.25
   employeeContributionsAnnual: number;
@@ -110,15 +133,20 @@ export interface SalaryBreakdown {
 
   // Net après impôts (avant autres avantages/retenues)
   netAfterTaxMonthly: number;
+  netAfterTaxAnnual: number;
 
   // Avantages et déductions
   mealVouchersDeductionMonthly: number;
   mealVouchersEmployerMonthly: number;
   transportReimbursementMonthly: number;
   mutuelleDeductionMonthly: number;
+  mutuelleEmployerMonthly: number;
+  totalEmployerBenefitsMonthly: number; // Total pouvoir d'achat net offert par l'employeur (transports + mutuelle patronale + tickets patronaux)
+  totalEmployeeBenefitsCostMonthly: number; // Total part salarié déduite pour les avantages (mutuelle + tickets)
 
   // Net final perçu en banque (mois standard)
   netInBankMonthlyStandard: number;
+  netWithAllBenefitsMonthly: number;
 
   // Épargne salariale
   participationCalc: BonusCalculation;
@@ -129,6 +157,9 @@ export interface SalaryBreakdown {
 
   // Net mensuel lissé (avec intéressement/participation versés lissés)
   netInBankMonthlySmoothed: number;
+  smoothedNetAfterTaxWithBonuses: number; // Net lissé après impôts + primes lissées
+  smoothedNetBeforeTaxWithBonuses: number; // Net lissé avant impôts + primes lissées
+  monthlyBonusAddition: number; // Quote-part mensuelle de prime lissée
 
   // Coût employeur (Super-brut)
   employerRate: number; // ~42%

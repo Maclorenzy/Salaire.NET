@@ -124,20 +124,34 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
     : 0;
   const grossAnnual = baseGrossAnnual + variableBonusAmount;
 
-  const months = params.monthsCount || 12;
-  const grossMonthly = grossAnnual / months;
-  const variableBonusMonthly = Math.round(variableBonusAmount / months);
+  const has14thMonth = !!params.has14thMonth;
+  const has13thMonth = has14thMonth || !!params.has13thMonth;
+  const months = (has14thMonth ? 14 : has13thMonth ? 13 : 12) as 12 | 13 | 14;
+  const extraMonthsCount = has14thMonth ? 2 : has13thMonth ? 1 : 0;
+  const extraFraction = has14thMonth ? 2 / 12 : has13thMonth ? 1 / 12 : 0;
 
-  // Taux de cotisations salariales moyen en France
-  // Non-cadre : ~24%
-  // Cadre : ~25% (APEC, prévoyance cadre 1.5% tranche A, retraite tranche 2)
+  // Règle 1: Le 13ème / 14ème mois est compris dans le salaire brut fixe annuel et versé en une fois.
+  // Si le 14ème mois est coché, il remplace le 13ème mois avec un dénominateur de 14 au lieu de 13.
+  const denominator = has14thMonth ? 14 : has13thMonth ? 13 : 12;
+  const baseAnnualGrossRegular = (baseGrossAnnual / denominator) * 12;
+  const baseGrossMonthlyStandard = Math.round(baseGrossAnnual / denominator);
+  const variableBonusMonthly = Math.round(variableBonusAmount / 12);
+  const annualGrossRegular = Math.round(baseAnnualGrossRegular + variableBonusAmount);
+  const grossMonthly = Math.round(baseGrossMonthlyStandard + variableBonusMonthly);
+
+  // Taux de cotisations salariales (curseur personnalisable par pas de 1%)
+  // Par défaut : Non-cadre ~24%, Cadre ~25%
   const isCadre = params.status === 'cadre';
-  const employeeRate = isCadre ? 0.25 : 0.24;
+  const defaultRatePercent = isCadre ? 25 : 24;
+  const effectiveContributionPercent = params.employeeContributionRate != null
+    ? Math.max(0, Math.min(60, params.employeeContributionRate))
+    : defaultRatePercent;
+  const employeeRate = effectiveContributionPercent / 100;
 
-  const employeeContributionsAnnual = grossAnnual * employeeRate;
-  const employeeContributionsMonthly = grossMonthly * employeeRate;
+  const employeeContributionsAnnual = annualGrossRegular * employeeRate;
+  const employeeContributionsMonthly = Math.round(grossMonthly * employeeRate);
 
-  // Détail estimé des cotisations salariales mensuelles
+  // Détail estimé des cotisations salariales mensuelles sur les mois courants
   const socialDetails = {
     health: Math.round(grossMonthly * 0.004), // Maladie/maternité
     basicRetirement: Math.round(grossMonthly * 0.073), // Vieillesse plafonnée et déplafonnée
@@ -148,16 +162,17 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
     cadreSpecific: isCadre ? Math.round(grossMonthly * 0.018) : 0, // APEC (0.024%) + Prévoyance cadre
   };
 
-  // Net avant impôt (Net à payer avant PAS)
-  const netBeforeTaxAnnual = grossAnnual - employeeContributionsAnnual;
-  const netBeforeTaxMonthly = grossMonthly - employeeContributionsMonthly;
+  // 1. Salaire Net Avant Impôts (mensuel et annuel) calculé sur la base de (brut/13)*12
+  const baseNetBeforeTaxAnnual = Math.round(annualGrossRegular - employeeContributionsAnnual);
+  const baseNetBeforeTaxMonthly = Math.round(grossMonthly - employeeContributionsMonthly);
+  const netBeforeTaxAnnual = baseNetBeforeTaxAnnual;
+  const netBeforeTaxMonthly = baseNetBeforeTaxMonthly;
 
-  // Net fiscal imposable (le net avant impôt + CSG/CRDS non déductible + part patronale mutuelle)
-  // En France : Net fiscal ≈ Net à payer + CSG non déductible (~2.9% * 98.25%) + mutuelle patronale
+  // Net fiscal imposable
   const employerMutuelleTaxableAnnual = params.mutuelle.enabled ? params.mutuelle.employerMonthlyCost * 12 : 0;
-  const nonDeductibleCsgAnnual = grossAnnual * 0.029 * 0.9825;
-  const taxableNetAnnual = netBeforeTaxAnnual + nonDeductibleCsgAnnual + employerMutuelleTaxableAnnual;
-  const taxableNetMonthly = taxableNetAnnual / months;
+  const nonDeductibleCsgAnnual = annualGrossRegular * 0.029 * 0.9825;
+  const taxableNetAnnual = baseNetBeforeTaxAnnual + nonDeductibleCsgAnnual + employerMutuelleTaxableAnnual;
+  const taxableNetMonthly = taxableNetAnnual / 12;
 
   // Calcul du taux d'impôt et du TMI
   const taxCalculated = calculateIncomeTax(
@@ -171,20 +186,20 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
   if (params.taxSource.enabled) {
     if (params.taxSource.mode === 'amount') {
       incomeTaxMonthly = Math.max(0, Math.round(params.taxSource.customAmount || 0));
-      finalTaxRate = netBeforeTaxMonthly > 0
-        ? Math.round((incomeTaxMonthly / netBeforeTaxMonthly) * 1000) / 10
+      finalTaxRate = baseNetBeforeTaxMonthly > 0
+        ? Math.round((incomeTaxMonthly / baseNetBeforeTaxMonthly) * 1000) / 10
         : 0;
     } else if (params.taxSource.mode === 'custom') {
       finalTaxRate = Math.max(0, Math.min(60, Math.round((params.taxSource.customRate || 0) * 10) / 10));
-      incomeTaxMonthly = Math.round(netBeforeTaxMonthly * (finalTaxRate / 100));
+      incomeTaxMonthly = Math.round(baseNetBeforeTaxMonthly * (finalTaxRate / 100));
     } else {
       finalTaxRate = taxCalculated.averageRate;
-      incomeTaxMonthly = Math.round(netBeforeTaxMonthly * (finalTaxRate / 100));
+      incomeTaxMonthly = Math.round(baseNetBeforeTaxMonthly * (finalTaxRate / 100));
     }
   }
 
   const marginalTaxRate = taxCalculated.marginalRate;
-  const incomeTaxAnnual = incomeTaxMonthly * months;
+  const incomeTaxAnnual = incomeTaxMonthly * 12;
 
   // Avantages et déductions concrètes en entreprise
   let mealVouchersDeductionMonthly = 0;
@@ -197,11 +212,31 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
     mealVouchersEmployerMonthly = Math.round(totalVoucherValue * employerRate);
   }
 
-  // Net après impôts (déduit de l'impôt à la source PAS ET de la part salarié des tickets restaurant)
-  const netAfterTaxMonthly = Math.max(
+  // 2. Salaire Net Après Impôts (mensuel et annuel) calculé après cotisations salariales et PAS
+  const baseNetAfterTaxMonthly = Math.max(
     0,
-    netBeforeTaxMonthly - incomeTaxMonthly - mealVouchersDeductionMonthly
+    baseNetBeforeTaxMonthly - incomeTaxMonthly - mealVouchersDeductionMonthly
   );
+  const baseNetAfterTaxAnnual = Math.max(
+    0,
+    baseNetBeforeTaxAnnual - incomeTaxAnnual - mealVouchersDeductionMonthly * 12
+  );
+  const netAfterTaxMonthly = baseNetAfterTaxMonthly;
+  const netAfterTaxAnnual = baseNetAfterTaxAnnual;
+
+  // Règle 2: Lissage du salaire net mensuel avant et après impôts en cas de 13ème ou 14ème mois activé
+  // Règle: ajouter 1/12 de salaire mensuel (avant et après impôts)
+  const smoothed13th14thNetBeforeTaxMonthly = extraMonthsCount > 0
+    ? Math.round((baseNetBeforeTaxMonthly * extraMonthsCount) / 12)
+    : 0;
+  const smoothedNetBeforeTaxMonthly = baseNetBeforeTaxMonthly + smoothed13th14thNetBeforeTaxMonthly;
+  const smoothedNetBeforeTaxAnnual = Math.round(smoothedNetBeforeTaxMonthly * 12);
+
+  const smoothed13th14thNetAfterTaxMonthly = extraMonthsCount > 0
+    ? Math.round((baseNetAfterTaxMonthly * extraMonthsCount) / 12)
+    : 0;
+  const smoothedNetAfterTaxMonthly = baseNetAfterTaxMonthly + smoothed13th14thNetAfterTaxMonthly;
+  const smoothedNetAfterTaxAnnual = Math.round(smoothedNetAfterTaxMonthly * 12);
 
   let transportReimbursementMonthly = 0;
   if (params.transportPass.enabled) {
@@ -210,12 +245,24 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
   }
 
   let mutuelleDeductionMonthly = 0;
+  let mutuelleEmployerMonthly = 0;
   if (params.mutuelle.enabled) {
     mutuelleDeductionMonthly = Math.round(params.mutuelle.employeeMonthlyCost);
+    mutuelleEmployerMonthly = Math.round(params.mutuelle.employerMonthlyCost);
   }
 
-  // Net final en banque (Mois standard sans prime de participation/intéressement)
-  // Formule fiche de paie : Net après impôts (incluant déduction tickets resto) - Part Mutuelle + Remboursement Navigo
+  // Total pouvoir d'achat net offert par l'employeur (transports + tickets employeur + mutuelle employeur)
+  const totalEmployerBenefitsMonthly =
+    transportReimbursementMonthly +
+    mealVouchersEmployerMonthly +
+    mutuelleEmployerMonthly;
+
+  // Total part salarié déduite pour les avantages du quotidien
+  const totalEmployeeBenefitsCostMonthly =
+    mealVouchersDeductionMonthly +
+    mutuelleDeductionMonthly;
+
+  // Net final perçu en banque (Mois standard sans prime de participation/intéressement)
   const netInBankMonthlyStandard = Math.max(
     0,
     Math.round(
@@ -224,6 +271,7 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
       transportReimbursementMonthly
     )
   );
+  const netWithAllBenefitsMonthly = netInBankMonthlyStandard;
 
   // Calcul des primes de participation et d'intéressement (si section activée)
   const isProfitSharingActive = !!params.profitSharingEnabled;
@@ -252,10 +300,26 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
 
   // Net mensuel lissé sur 12 mois (avec les primes versées réparties sur l'année pour le budget réel)
   const monthlyBonusAddition = Math.round(totalBonusNetImmediateAnnual / 12);
-  const netInBankMonthlySmoothed = netInBankMonthlyStandard + monthlyBonusAddition;
+  
+  // Règle : le "Net mensuel lissé avec primes" doit être ajouté au "Net mensuel lissé après impôts"
+  // (13ème ou 14ème mois) si la coche correspondante est cochée, ou au net après impôts standard sinon.
+  const baseNetForSmoothedWithBonuses = extraMonthsCount > 0
+    ? smoothedNetAfterTaxMonthly
+    : netAfterTaxMonthly;
+  const smoothedNetAfterTaxWithBonuses = baseNetForSmoothedWithBonuses + monthlyBonusAddition;
+
+  // Règle équivalente avant impôts : ajouté au Net mensuel lissé avant impôts (13e/14e mois) ou au Net avant impôts standard sinon
+  const baseNetBeforeTaxForSmoothedWithBonuses = extraMonthsCount > 0
+    ? smoothedNetBeforeTaxMonthly
+    : netBeforeTaxMonthly;
+  const smoothedNetBeforeTaxWithBonuses = baseNetBeforeTaxForSmoothedWithBonuses + monthlyBonusAddition;
+
+  const baseInBankForSmoothed = extraMonthsCount > 0
+    ? Math.max(0, Math.round(smoothedNetAfterTaxMonthly - mutuelleDeductionMonthly + transportReimbursementMonthly))
+    : netInBankMonthlyStandard;
+  const netInBankMonthlySmoothed = baseInBankForSmoothed + monthlyBonusAddition;
 
   // Coût global employeur (Super-Brut)
-  // Cotisations patronales moyennes : ~42% (peut monter à 45% pour hauts salaires, ou 30% proche SMIC)
   const employerRate = grossAnnual < 35000 ? 0.38 : isCadre ? 0.45 : 0.42;
   const employerContributionsMonthly = Math.round(grossMonthly * employerRate);
   const totalEmployerCostMonthly = Math.round(
@@ -265,7 +329,7 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
     transportReimbursementMonthly +
     (params.mutuelle.enabled ? params.mutuelle.employerMonthlyCost : 0)
   );
-  const totalEmployerCostAnnual = totalEmployerCostMonthly * months;
+  const totalEmployerCostAnnual = totalEmployerCostMonthly * 12;
 
   return {
     baseGrossAnnual,
@@ -274,7 +338,24 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
     variableBonusAmount,
     variableBonusMonthly,
     grossAnnual,
+    annualGrossRegular,
     grossMonthly: Math.round(grossMonthly),
+    has13thMonth,
+    has14thMonth,
+    extraFraction,
+    smoothed13th14thNetBeforeTaxMonthly,
+    smoothed13th14thNetAfterTaxMonthly,
+    smoothedNetBeforeTaxMonthly,
+    smoothedNetBeforeTaxAnnual,
+    smoothedNetAfterTaxMonthly,
+    smoothedNetAfterTaxAnnual,
+    baseGrossMonthlyStandard,
+    baseNetBeforeTaxMonthly,
+    baseNetAfterTaxMonthly,
+    baseNetBeforeTaxAnnual,
+    baseNetAfterTaxAnnual,
+    monthsCount: months,
+    extraMonthsCount,
     employeeStatus: params.status,
     employeeRate,
     employeeContributionsAnnual: Math.round(employeeContributionsAnnual),
@@ -289,17 +370,25 @@ export function calculateSalary(params: SimulationParams): SalaryBreakdown {
     incomeTaxAnnual,
     incomeTaxMonthly,
     netAfterTaxMonthly,
+    netAfterTaxAnnual: Math.round(netAfterTaxAnnual),
     mealVouchersDeductionMonthly,
     mealVouchersEmployerMonthly,
     transportReimbursementMonthly,
     mutuelleDeductionMonthly,
+    mutuelleEmployerMonthly,
+    totalEmployerBenefitsMonthly,
+    totalEmployeeBenefitsCostMonthly,
     netInBankMonthlyStandard,
+    netWithAllBenefitsMonthly,
     participationCalc,
     interessementCalc,
     totalBonusNetImmediateAnnual,
     totalBonusNetPlacedAnnual,
     totalTaxSavedByPlacement,
     netInBankMonthlySmoothed,
+    smoothedNetAfterTaxWithBonuses,
+    smoothedNetBeforeTaxWithBonuses,
+    monthlyBonusAddition,
     employerRate,
     employerContributionsMonthly,
     totalEmployerCostMonthly,

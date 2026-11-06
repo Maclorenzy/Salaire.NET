@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BonusCalculation, SalaryBreakdown } from '../types/salary';
 import { formatEuro } from '../utils/salaryCalculations';
-import { PiggyBank, Wallet, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { PiggyBank, Wallet, ArrowRight, ShieldCheck, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ArbitrageCardProps {
   breakdown: SalaryBreakdown;
@@ -17,21 +17,53 @@ export const ArbitrageCard: React.FC<ArbitrageCardProps> = ({
   breakdown,
   onSetAllTo,
 }) => {
+  const [isOpen, setIsOpen] = useState(true);
+
   const totalGrossBonus =
     breakdown.participationCalc.grossAmount + breakdown.interessementCalc.grossAmount;
 
   if (totalGrossBonus <= 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm text-center">
-        <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-          <PiggyBank className="w-6 h-6" />
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div
+          onClick={() => setIsOpen(!isOpen)}
+          className="bg-slate-50/80 p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-200/80"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <PiggyBank className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                Arbitrage Épargne Salariale : Cash vs Placement PEE / PER
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Aucune prime de participation ou d&apos;intéressement saisie
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="text-slate-500 hover:text-slate-800 p-1 rounded-md cursor-pointer"
+            aria-label={isOpen ? "Replier l'arbitrage épargne" : "Déplier l'arbitrage épargne"}
+          >
+            {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </button>
         </div>
-        <h3 className="text-base font-bold text-slate-800">
-          Arbitrage Épargne Salariale : Versement ou Placement ?
-        </h3>
-        <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-          Renseignez un montant pour la participation ou l&apos;intéressement ci-dessus pour comparer instantanément le gain net en poche vs l&apos;économie d&apos;impôt en PEE/PER.
-        </p>
+
+        {isOpen && (
+          <div className="p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+              <PiggyBank className="w-6 h-6" />
+            </div>
+            <h4 className="text-sm font-bold text-slate-800">
+              Arbitrage Épargne Salariale : Versement ou Placement ?
+            </h4>
+            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+              Renseignez un montant pour la participation ou l&apos;intéressement ci-dessus pour comparer instantanément le gain net en poche vs l&apos;économie d&apos;impôt en PEE/PER.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -50,36 +82,76 @@ export const ArbitrageCard: React.FC<ArbitrageCardProps> = ({
       : (breakdown.interessementCalc.grossAmount * (1 - csgRate)) * (1 + (breakdown.interessementCalc.employerMatchAmount > 0 ? 0.5 : 0)))
   );
 
+  const isAllVersement =
+    breakdown.participationCalc.choice === 'versement' &&
+    breakdown.interessementCalc.choice === 'versement';
+  const isAllPlacement =
+    breakdown.participationCalc.choice === 'placement' &&
+    breakdown.interessementCalc.choice === 'placement';
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-        <div>
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span>Arbitrage Épargne Salariale (Versement vs Placement)</span>
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Total primes déclarées : <strong className="font-mono text-slate-800">{formatEuro(totalGrossBonus)} brut</strong> · Votre TMI estimé : <strong className="font-mono text-blue-700">{breakdown.marginalTaxRate}%</strong>
-          </p>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-slate-50/80 p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition-colors select-none border-b border-slate-200/80"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <PiggyBank className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Arbitrage Épargne Salariale (Cash vs Placement PEE / PER)</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Total primes : <strong className="font-mono text-slate-800">{formatEuro(totalGrossBonus)} brut</strong> · TMI estimé : <strong className="font-mono text-blue-700">{breakdown.marginalTaxRate}%</strong>
+            </p>
+          </div>
         </div>
 
-        {/* Quick action buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Quick action buttons & Chevron */}
+        <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             onClick={() => onSetAllTo('versement')}
-            className="px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+              isAllVersement
+                ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-500 hover:bg-emerald-700'
+                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            }`}
           >
-            Tout verser en cash
+            {isAllVersement && <CheckCircle2 className="w-3.5 h-3.5" />}
+            <span>Tout en cash</span>
           </button>
           <button
             type="button"
             onClick={() => onSetAllTo('placement')}
-            className="px-2.5 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors cursor-pointer shadow-xs"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+              isAllPlacement
+                ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-500 hover:bg-emerald-700'
+                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            }`}
           >
-            Tout placer sur PEE
+            {isAllPlacement && <CheckCircle2 className="w-3.5 h-3.5" />}
+            <span>Tout en PEE</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+            className="text-slate-500 hover:text-slate-800 p-1 rounded-md cursor-pointer"
+            aria-label={isOpen ? "Replier l'arbitrage épargne" : "Déplier l'arbitrage épargne"}
+          >
+            {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
         </div>
       </div>
+
+      {isOpen && (
+        <div className="p-5 sm:p-6 space-y-5">
 
       {/* Side-by-side comparison */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -170,6 +242,8 @@ export const ArbitrageCard: React.FC<ArbitrageCardProps> = ({
           Même si les fonds du PEE sont théoriquement bloqués 5 ans, vous pouvez les retirer <strong>sans payer d&apos;impôt sur le revenu</strong> dans de nombreux cas de la vie courante : achat ou rénovation de la résidence principale, mariage, PACS, 3e enfant, fin du contrat de travail (changement d&apos;employeur, démission, rupture conventionnelle).
         </p>
       </div>
+        </div>
+      )}
     </div>
   );
 };

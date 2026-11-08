@@ -25,7 +25,7 @@ export const IncomeTaxSection: React.FC<IncomeTaxSectionProps> = ({
   incomeTaxMonthly,
   mealVoucherEmployeeDeduction = 0,
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Step 0.1% handlers for Tax Rate
   const handleRateIncrement = (delta: number) => {

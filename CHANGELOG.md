@@ -3,6 +3,24 @@
 Toutes les modifications notables apportées à ce projet sont documentées dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.26.0] - 2026-11-08
+
+### Demande de modification
+> « supprime les deux encadrés voir image.png car doublon avec l'encadré "bulletin de paye"
+> Rend les encadrés pliés par défaut sauf l'encadré 1 »
+
+### Modifié
+- **Suppression des deux encadrés en doublon en bas de page** :
+  - Suppression de la grille secondaire inférieure qui réaffichait `ArbitrageCard` et `EmployerCostCard` en pleine largeur en bas de page. Ces modules restent consultables instantanément via le système d'onglets du panneau de droite (« Arbitrage Épargne » et « Coût Employeur »).
+- **Repli automatique par défaut de tous les encadrés (sauf l'encadré 1)** :
+  - **Encadré 1 — Salaire Brut Annuel & Statut** : reste **déplié** par défaut pour permettre à l'utilisateur de saisir ou ajuster immédiatement son salaire brut, statut et part variable.
+  - **Encadré 2 — Avantages Sociaux** : plié par défaut.
+  - **Encadré 3 — Impôt sur le Revenu (PAS)** : plié par défaut.
+  - **Encadré 4 — Épargne Salariale : Participation & Intéressement** : plié par défaut.
+  - **Cartes d'onglets (Bulletin de Paie Clarifié, Arbitrage Épargne, Coût Employeur)** : pliées par défaut.
+
+---
+
 ## [1.25.0] - 2026-11-03
 
 ### Demande de modification

@@ -31,7 +31,7 @@ export const ProfitSharingSection: React.FC<ProfitSharingSectionProps> = ({
   setSmoothBonuses,
   marginalTaxRate,
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleAmountChange = (
     setter: React.Dispatch<React.SetStateAction<BonusItem>>,

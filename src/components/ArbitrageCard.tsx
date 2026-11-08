@@ -17,7 +17,7 @@ export const ArbitrageCard: React.FC<ArbitrageCardProps> = ({
   breakdown,
   onSetAllTo,
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   const totalGrossBonus =
     breakdown.participationCalc.grossAmount + breakdown.interessementCalc.grossAmount;

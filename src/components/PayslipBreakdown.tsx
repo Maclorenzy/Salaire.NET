@@ -13,7 +13,7 @@ interface PayslipBreakdownProps {
 }
 
 export const PayslipBreakdown: React.FC<PayslipBreakdownProps> = ({ breakdown }) => {
-  const [showDetails, setShowDetails] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

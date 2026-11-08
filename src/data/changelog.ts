@@ -19,15 +19,42 @@ export interface VersionRelease {
   highlights: string[];
 }
 
-export const APP_VERSION = 'v1.25.0';
-export const APP_RELEASE_DATE = '3 Novembre 2026';
+export const APP_VERSION = 'v1.26.0';
+export const APP_RELEASE_DATE = '8 Novembre 2026';
 
 export const CHANGELOG_DATA: VersionRelease[] = [
+  {
+    version: 'v1.26.0',
+    date: '8 Novembre 2026',
+    title: 'Suppression des Doublons en Bas de Page & Repli par Défaut des Encadrés',
+    badge: 'Dernière version',
+    userPrompt:
+      'supprime les deux encadrés voir image.png car doublon avec l\'encadré "bulletin de paye"\nRend les encadrés pliés par défaut sauf l\'encadré 1',
+    summary:
+      'Épuration de la mise en page avec suppression des deux encadrés redondants en bas de page (Arbitrage Épargne et Coût Employeur) qui faisaient doublon avec le système d\'onglets interactifs. Par ailleurs, tous les encadrés sont désormais pliés par défaut au chargement (Avantages Sociaux, Impôt sur le Revenu, Épargne Salariale, Bulletin de Paie, Arbitrage et Coût Employeur) à l\'exception exclusive de l\'encadré 1 (Salaire Brut Annuel & Statut) qui reste immédiatement accessible.',
+    highlights: [
+      'Suppression des deux encadrés superflus en bas de page pour éliminer tout doublon',
+      'Encadré 1 (Salaire Brut Annuel & Statut) déplié par défaut pour une prise en main directe',
+      'Tous les autres encadrés (2. Avantages Sociaux, 3. Impôts, 4. Épargne, Bulletin, Arbitrage, Coût Employeur) repliés par défaut pour un affichage net et épuré',
+    ],
+    changes: [
+      {
+        type: 'ux',
+        description:
+          'Repli par défaut de l\'ensemble des cartes accordéons pour une interface épurée et sans encombrement dès l\'arrivée sur la page, sauf l\'encadré 1.',
+      },
+      {
+        type: 'refactor',
+        description:
+          'Suppression du bloc de cartes secondaires en bas de page en doublon avec les onglets dynamiques du panneau de droite.',
+      },
+    ],
+  },
   {
     version: 'v1.25.0',
     date: '3 Novembre 2026',
     title: 'Séparation en 4 Encadrés Dédiés & Accordéon Généralisé (Bulletin, Arbitrage, Coût Employeur)',
-    badge: 'Dernière version',
+    badge: 'Évolution',
     userPrompt:
       'sépare en 2 encadrés les avantages et les impots et dote ces encadrés du même mécanisme de pliage/dépliage de même pour:\nl\'encadré "Bulletin de Paie Clarifié (Mensuel)"\net Arbitrage Epargne et coût total employeur. L\'encadré 2 deviendra Avantages sociaux, les impots en 3 et l\'épargne salariale en 4.',
     summary:

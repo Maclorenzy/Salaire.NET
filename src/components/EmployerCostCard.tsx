@@ -13,7 +13,7 @@ interface EmployerCostCardProps {
 }
 
 export const EmployerCostCard: React.FC<EmployerCostCardProps> = ({ breakdown }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   const totalCost = breakdown.totalEmployerCostMonthly;
   const netInPocket = breakdown.netInBankMonthlyStandard;

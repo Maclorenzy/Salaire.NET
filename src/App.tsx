@@ -403,17 +403,6 @@ Coût Global Entreprise (Super-Brut) : ${formatEuro(breakdown.totalEmployerCostM
             )}
           </div>
         </div>
-
-        {/* Detailed Secondary Sections on desktop view (Full Width for in-depth consultation) */}
-        <div className="pt-8 border-t border-slate-200 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <ArbitrageCard
-              breakdown={breakdown}
-              onSetAllTo={handleSetAllBonusesTo}
-            />
-            <EmployerCostCard breakdown={breakdown} />
-          </div>
-        </div>
       </main>
 
       {/* Clean Footer */}

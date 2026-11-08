@@ -25,7 +25,7 @@ export const SocialBenefitsSection: React.FC<SocialBenefitsSectionProps> = ({
   mutuelle,
   setMutuelle,
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Calcul part salariale des tickets restaurant
   const mealVoucherEmployeeDeduction = mealVouchers.enabled
